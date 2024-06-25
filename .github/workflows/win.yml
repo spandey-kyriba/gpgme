@@ -53,7 +53,7 @@ jobs:
       run: |
         vcpkg new --application
         vcpkg add port shiftmedia-libgpg-error
-        echo '{"dependencies": [{"name": "shiftmedia-libgpg-error"}' > .\vcpkg.json
+        echo '{"dependencies": [{"name": "shiftmedia-libgpg-error"}]' > .\vcpkg.json
         vcpkg install
         Get-ChildItem -Recurse C:/vcpkg/packages
     # - name: Upload wheel
