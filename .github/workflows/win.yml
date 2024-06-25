@@ -38,6 +38,8 @@ jobs:
     - name: 'Setup NuGet credentials'
       shell: 'bash'
       run: |
+        ./autogen.sh --build-amd64
+        mkdir build && cd build && ../configure  && make
         nuget="$(vcpkg fetch nuget | tail -n 1)"
         "${nuget}" \
           sources add \
