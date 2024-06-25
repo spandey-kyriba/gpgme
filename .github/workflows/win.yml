@@ -1,0 +1,62 @@
+name: CI-Windows
+
+on:
+  push:
+    branches: [ "gpgme-py" ]
+    paths-ignore: []
+  pull_request:
+    branches: [ master ]
+    paths-ignore: []
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-2022
+    env:
+      VCPKG_BINARY_SOURCES: 'clear;nuget,GitHub,readwrite'
+    strategy:
+      matrix:
+        arch: ["x64"]
+        python-version: ["3.11.2"]
+      fail-fast: false
+    permissions:
+      packages: write
+
+    steps:
+    - uses: actions/checkout@v3
+    - uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: ${{ matrix.arch }}
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        architecture: ${{ matrix.arch }}
+    - name: 'Setup NuGet credentials'
+      shell: 'bash'
+      run: |
+        nuget="$(vcpkg fetch nuget | tail -n 1)"
+        "${nuget}" \
+          sources add \
+          -source "https://nuget.pkg.github.com/${GITHUB_REPOSITORY_OWNER}/index.json" \
+          -storepasswordincleartext \
+          -name "GitHub" \
+          -username "${GITHUB_REPOSITORY_OWNER}" \
+          -password "${{ secrets.GITHUB_TOKEN }}"
+        "${nuget}" \
+          setapikey "${{ secrets.GITHUB_TOKEN }}" \
+          -source "https://nuget.pkg.github.com/${GITHUB_REPOSITORY_OWNER}/index.json"
+    - name: Install packages
+      run: |
+        vcpkg new --application
+        vcpkg add port shiftmedia-libgpg-error
+        echo '{"dependencies": [{"name": "shiftmedia-libgpg-error"}' > .\vcpkg.json
+        vcpkg install
+        Get-ChildItem -Recurse C:/vcpkg/packages
+    # - name: Upload wheel
+    #   uses: actions/upload-artifact@v3
+    #   with:
+    #     path: wheelhouse/*.whl
